@@ -2,11 +2,11 @@
   "schema_version": 1,
   "diagram_type": "dataflow",
   "meta": {
-    "title": "Zvec Knowledge DB — данные и путь поиска",
+    "title": "Vector Brain — данные и путь поиска",
     "output": "docs/vector-brain.dataflow.html",
     "viewBox": [
       1080,
-      660
+      760
     ],
     "quality_profile": "showcase",
     "views": [
