@@ -1,0 +1,315 @@
+{
+  "schema_version": 1,
+  "diagram_type": "dataflow",
+  "meta": {
+    "title": "Zvec Knowledge DB — данные и путь поиска",
+    "output": "docs/zvec-knowledge-dataflow.html",
+    "viewBox": [
+      1080,
+      660
+    ],
+    "quality_profile": "showcase",
+    "views": [
+      {
+        "id": "indexing-path",
+        "label": "Путь индексации",
+        "focus": [
+          "memory",
+          "vault",
+          "skills",
+          "chunker",
+          "embedder",
+          "wal"
+        ],
+        "note": "Markdown-источники проходят чанкировку, эмбеддинг через Ollama и попадают в zvec через WAL."
+      },
+      {
+        "id": "search-path",
+        "label": "Путь поиска",
+        "focus": [
+          "zq",
+          "hnsw",
+          "fts"
+        ],
+        "note": "Гибридный запрос: вектор + BM25, слитые WeightedReRanker."
+      },
+      {
+        "id": "durability",
+        "label": "Персистентность",
+        "focus": [
+          "wal",
+          "segments",
+          "arrow"
+        ],
+        "note": "WAL даёт crash-safety: реплей при следующем open()."
+      }
+    ]
+  },
+  "stages": [
+    {
+      "label": "Источники"
+    },
+    {
+      "label": "Обработка"
+    },
+    {
+      "label": "Хранение zvec"
+    },
+    {
+      "label": "Поиск"
+    },
+    {
+      "label": "Потребители"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "memory",
+      "type": "frontend",
+      "label": "long_memory",
+      "sublabel": "md-факты",
+      "stage": 0,
+      "row": 0,
+      "tag": "md"
+    },
+    {
+      "id": "vault",
+      "type": "frontend",
+      "label": "Obsidian vault",
+      "sublabel": "заметки",
+      "stage": 0,
+      "row": 2,
+      "tag": "md"
+    },
+    {
+      "id": "skills",
+      "type": "frontend",
+      "label": "SKILL.md ×917",
+      "sublabel": "навыки",
+      "stage": 0,
+      "row": 4,
+      "tag": "md"
+    },
+    {
+      "id": "chunker",
+      "type": "backend",
+      "label": "Indexer",
+      "sublabel": "SHA1, чанки",
+      "stage": 1,
+      "row": 2,
+      "tag": "инкрементально"
+    },
+    {
+      "id": "embedder",
+      "type": "backend",
+      "label": "Ollama",
+      "sublabel": "nomic 768d",
+      "stage": 1,
+      "row": 0,
+      "tag": "локально"
+    },
+    {
+      "id": "wal",
+      "type": "messagebus",
+      "label": "WAL",
+      "sublabel": "fsync",
+      "stage": 2,
+      "row": 2,
+      "tag": "crash-safe"
+    },
+    {
+      "id": "segments",
+      "type": "database",
+      "label": "Сегменты",
+      "sublabel": "LSM seal",
+      "stage": 2,
+      "row": 0,
+      "tag": "LSM"
+    },
+    {
+      "id": "arrow",
+      "type": "database",
+      "label": "Arrow IPC",
+      "sublabel": "mmap",
+      "stage": 2,
+      "row": 4,
+      "tag": "zero-copy"
+    },
+    {
+      "id": "hnsw",
+      "type": "database",
+      "label": "HNSW",
+      "sublabel": "optimize()",
+      "stage": 3,
+      "row": 0,
+      "tag": "ANN"
+    },
+    {
+      "id": "fts",
+      "type": "database",
+      "label": "BM25 idx",
+      "sublabel": "RocksDB",
+      "stage": 3,
+      "row": 4,
+      "tag": "FTS"
+    },
+    {
+      "id": "zq",
+      "type": "backend",
+      "label": "zq CLI",
+      "sublabel": "hybrid query",
+      "stage": 3,
+      "row": 2,
+      "tag": "read-only"
+    },
+    {
+      "id": "studio",
+      "type": "frontend",
+      "label": "Zvec Studio",
+      "sublabel": "GUI :7860",
+      "stage": 4,
+      "row": 0,
+      "tag": "человек"
+    },
+    {
+      "id": "agents",
+      "type": "external",
+      "label": "Агенты",
+      "sublabel": "MCP/CLI",
+      "stage": 4,
+      "row": 4,
+      "tag": "автоматика"
+    }
+  ],
+  "flows": [
+    {
+      "id": "mem-idx",
+      "from": "memory",
+      "to": "chunker",
+      "label": "md-файлы",
+      "classification": "инкрементально",
+      "variant": "default"
+    },
+    {
+      "id": "skills-idx",
+      "from": "skills",
+      "to": "chunker",
+      "label": "SKILL.md",
+      "classification": "инкрементально",
+      "variant": "default"
+    },
+    {
+      "id": "idx-emb",
+      "from": "chunker",
+      "to": "embedder",
+      "label": "тексты",
+      "classification": "batch",
+      "variant": "emphasis",
+      "labelDy": -18
+    },
+    {
+      "id": "idx-wal",
+      "from": "chunker",
+      "to": "wal",
+      "label": "docs+векторы",
+      "classification": "запись",
+      "variant": "emphasis"
+    },
+    {
+      "id": "wal-seg",
+      "from": "wal",
+      "to": "segments",
+      "label": "seal",
+      "classification": "персистентность",
+      "variant": "security",
+      "labelDy": -18
+    },
+    {
+      "id": "wal-arrow",
+      "from": "wal",
+      "to": "arrow",
+      "label": "commit",
+      "classification": "персистентность",
+      "variant": "security",
+      "labelDy": 36
+    },
+    {
+      "id": "seg-hnsw",
+      "from": "segments",
+      "to": "hnsw",
+      "label": "optimize()",
+      "classification": "достройка",
+      "variant": "emphasis"
+    },
+    {
+      "id": "arrow-fts",
+      "from": "arrow",
+      "to": "fts",
+      "label": "термы",
+      "classification": "индексация",
+      "variant": "default"
+    },
+    {
+      "id": "hnsw-zq",
+      "from": "hnsw",
+      "to": "zq",
+      "label": "cos-dist",
+      "classification": "recall",
+      "variant": "default",
+      "labelDy": 22
+    },
+    {
+      "id": "fts-zq",
+      "from": "fts",
+      "to": "zq",
+      "classification": "exact",
+      "variant": "default",
+      "label": "bm25",
+      "labelDy": -22
+    },
+    {
+      "id": "zq-studio",
+      "from": "zq",
+      "to": "studio",
+      "label": "гибрид DocList",
+      "classification": "weighted 0.5/0.5",
+      "variant": "default",
+      "labelDy": -22
+    },
+    {
+      "id": "zq-agents",
+      "from": "zq",
+      "to": "agents",
+      "label": "evidence",
+      "classification": "MCP/CLI",
+      "variant": "dashed",
+      "labelDx": 80
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "Главный путь",
+      "items": [
+        "Запись: чанки → Ollama 768d → WAL → сегменты; optimize() достраивает HNSW в фоне",
+        "Инкрементальность по SHA1-хэшам: неизменённые файлы пропускаются"
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Гибридный поиск",
+      "items": [
+        "Векторная ветка: HNSW COSINE, score = расстояние (меньше = ближе)",
+        "Терм-ветка: BM25 через RocksDB, ловит точные сущности"
+      ]
+    },
+    {
+      "dot": "orange",
+      "title": "Надёжность",
+      "items": [
+        "WAL fsync до применения: kill -9 процесса не теряет данные",
+        "Tombstones в delete-store, выпиливаются optimize-компакцией"
+      ]
+    }
+  ]
+}
