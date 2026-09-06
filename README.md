@@ -1,4 +1,4 @@
-# zvec-knowledge-db
+# Vector Brain
 
 Локальная база знаний на [zvec](https://github.com/alibaba/zvec) — встроенной
 (inside-process) векторной БД от Alibaba. Гибридный поиск (семантика + BM25 +

@@ -84,7 +84,7 @@ col.query(queries=[
 
 ## Инкрементальный индексатор
 
-Скрипт `~/projects/zvec-db/indexer.py`:
+Скрипт `~/projects/vector-brain/indexer.py`:
 - обходит источники, считает (path, mtime, size);
 - в коллекции хранить хэш в скалярном поле и делать upsert по id `{source}:{path}:{n}`;
 - новый/изменённый файл → delete_by_filter по path + заново чанки;
@@ -122,7 +122,7 @@ col.query(queries=[
 
 ## Порядок внедрения (пилот)
 
-1. venv `~/.venvs/zvec`, скелет `~/projects/zvec-db/` (indexer.py, zq.py, config).
+1. venv `~/.venvs/zvec`, скелет `~/projects/vector-brain/` (indexer.py, zq.py, config).
 2. Пилот только на long_memory (49 файлов — малый контур): проверить качество
    гибридного поиска руками на 5–6 реальных запросах из практики
    («зависание gfx1150», «git-credentials истекает», «1С расширение CFE»).
