@@ -3,7 +3,7 @@
   "diagram_type": "dataflow",
   "meta": {
     "title": "Zvec Knowledge DB — данные и путь поиска",
-    "output": "docs/zvec-knowledge-dataflow.html",
+    "output": "docs/vector-brain.dataflow.html",
     "viewBox": [
       1080,
       660
