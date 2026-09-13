@@ -12,11 +12,12 @@ DB_ROOT = "~/zvec"                             # коллекции zvec
 KNOWLEDGE_PATH = DB_ROOT + "/knowledge"
 
 # Источники для индексации (name, корневая директория, glob).
-# Пример: личные заметки, vault, описания навыков.
+# Это рабочие пути Hermes по умолчанию: долговременная память, vault и навыки.
+# Для другого набора замени на свои (например: ~/notes, ~/Obsidian).
 SOURCES = [
-    ("memory", "~/notes/long_memory", "**/*.md"),
-    ("vault", "~/notes/vault", "**/*.md"),
-    ("skill", "~/skills", "**/SKILL.md"),
+    ("memory", "~/.hermes/long_memory", "**/*.md"),
+    ("vault", "~/.hermes/vault", "**/*.md"),
+    ("skill", "~/.hermes/skills", "**/SKILL.md"),
 ]
 
 # Чанкировка
