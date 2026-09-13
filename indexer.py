@@ -105,15 +105,40 @@ def escape(s: str) -> str:
     return s.replace("\\", "\\\\").replace("'", "\\'")
 
 
+def open_collection_with_retry(knowledge_path: str, create: bool = False,
+                               attempts: int = 6, delay: float = 10.0):
+    """Открыть коллекцию на запись, переждав чужой LOCK.
+
+    Коллекция — однописательская: если её держит другой процесс (zvec-studio
+    держит write-lock, пока к нему обращаются из UI), zvec.open падает с
+    "Can't lock read-write collection". Раньше indexer.py в этом случае просто
+    выходил с кодом 1 — то есть прогон по расписанию молча терялся.
+    """
+    last: Exception | None = None
+    for i in range(attempts):
+        try:
+            return (
+                zvec.create_and_open(path=knowledge_path, schema=SCHEMA)
+                if create or not os.path.exists(knowledge_path)
+                else zvec.open(knowledge_path)
+            )
+        except RuntimeError as e:
+            last = e
+            if "lock" not in str(e).lower():
+                raise
+            if i == attempts - 1:
+                break
+            print(f"коллекция занята другим процессом, повтор через {delay:.0f}с "
+                  f"({i + 1}/{attempts - 1})", flush=True)
+            time.sleep(delay)
+    raise last
+
+
 def index_collection(create: bool = False) -> None:
     emb = OllamaEmbedder()
     state = load_state()
     knowledge_path = os.path.expanduser(KNOWLEDGE_PATH)
-    col = (
-        zvec.create_and_open(path=knowledge_path, schema=SCHEMA)
-        if create or not os.path.exists(knowledge_path)
-        else zvec.open(knowledge_path)
-    )
+    col = open_collection_with_retry(knowledge_path, create)
 
     files = collect_files()
     new_state = {f"{source}:{rel}": file_hash(p) for source, p, rel in files}
