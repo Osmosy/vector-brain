@@ -41,9 +41,10 @@ def main() -> None:
 
     filters = []
     if args.source:
-        filters.append(f"source == '{args.source}'")
+        # В zvec-фильтрах равенство — одиночный '=' (не '=='); см. README, «Ключевые решения».
+        filters.append(f"source = '{args.source}'")
     if args.date:
-        op = ">=" if args.date.startswith(">") else "=="
+        op = ">=" if args.date.startswith(">") else "="
         val = args.date.lstrip("><= ")
         filters.append(f"date {op} '{val}'")
     filt = " and ".join(filters) or None

@@ -63,13 +63,34 @@ def file_hash(path: str) -> str:
 
 
 def collect_files() -> list[tuple[str, str, str]]:
-    """[(source, abs_path, rel_path)] по всем источникам."""
-    out = []
+    """[(source, abs_path, rel_path)] по всем источникам.
+
+    Симлинки: один и тот же файл может быть достижим по двум путям (каталог-симлинк
+    верхнего уровня + реальный каталог в наборе, напр. `writing-skills/` ->
+    `superpowers/skills/writing-skills/`). Без дедупликации такой файл индексируется
+    дважды под разными id. Оставляем один путь — самый короткий (канонический).
+    """
+    seen: dict[str, tuple[int, str, str]] = {}   # realpath -> (глубина, source, abs_path)
+    order: list[str] = []
     for name, root, pattern in SOURCES:
         root = os.path.expanduser(root)
         for p in sorted(glob.glob(os.path.join(root, pattern), recursive=True)):
-            if os.path.isfile(p):
-                out.append((name, p, os.path.relpath(p, root)))
+            if not os.path.isfile(p):
+                continue
+            real = os.path.realpath(p)
+            depth = os.path.relpath(p, root).count(os.sep)
+            if real in seen:
+                if depth < seen[real][0]:
+                    seen[real] = (depth, name, p)
+                continue
+            seen[real] = (depth, name, p)
+            order.append(real)
+
+    out = []
+    for real in order:
+        _, name, p = seen[real]
+        root = os.path.expanduser(dict((n, r) for n, r, _ in SOURCES)[name])
+        out.append((name, p, os.path.relpath(p, root)))
     return out
 
 
@@ -140,8 +161,19 @@ def index_collection(create: bool = False) -> None:
         n_new_chunks += len(docs)
         n_reindexed += 1
 
-    # 4. Файлы, исчезнувшие из источников — tombstones; подчистит optimize
+    # 4. Файлы, исчезнувшие из источников — tombstones; подчистит optimize.
+    # ВАЖНО: удалённый файл недостаточно убрать из state — его чанки остаются в
+    # коллекции навсегда, если не сделать delete_by_filter по сохранённому пути.
     gone = set(state) - set(new_state)
+    for key in gone:
+        source, rel = key.split(":", 1)
+        root = os.path.expanduser(dict((n, r) for n, r, _ in SOURCES).get(source, ""))
+        if not root:
+            continue
+        path = os.path.join(root, rel)
+        col.delete_by_filter(f"path = '{escape(path)}' and source = '{source}'")
+    if gone:
+        n_deleted += len(gone)
 
     save_state(new_state)
 
